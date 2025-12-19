@@ -55,8 +55,9 @@ export function useIOSVersionCheck(minVersion: number) {
 export function useIOSVersionNumber(): number | null {
   if (Platform.OS !== 'ios') return null;
   const version = Platform.Version;
-  if (typeof version === 'string') {
-    return parseFloat(version);
-  }
-  return version;
+  // if (typeof version === 'string') {
+  //   return parseFloat(version);
+  // }
+  // return version;
+  return parseInt(Platform.Version as string, 10);
 }

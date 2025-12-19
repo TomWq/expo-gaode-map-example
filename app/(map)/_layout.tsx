@@ -116,6 +116,11 @@ export default function Layout() {
                 options={{ title: '' , headerTransparent: true,}}
             />
             
+            <Stack.Screen
+                name="offlineMapExample"
+                options={{ title: '离线地图下载' , }}
+            />
+
         </Stack>
     )
 }

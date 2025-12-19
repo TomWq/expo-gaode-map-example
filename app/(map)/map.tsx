@@ -14,11 +14,12 @@ import {
   Polyline,
   type CameraPosition,
   type Coordinates,
-  type ReGeocode,
+  type ReGeocode
 } from 'expo-gaode-map';
 import { useNavigation } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { toast } from 'sonner-native';
 
 const iconUri = Image.resolveAssetSource(require('@/assets/images/positio_icon.png')).uri;
 
@@ -99,6 +100,7 @@ export default function MamScreen() {
         
         // 检查定位权限
         const status = await ExpoGaodeMapModule.checkLocationPermission();
+        
         if (!status.granted) {
           const result = await ExpoGaodeMapModule.requestLocationPermission();
           if (!result.granted) {
@@ -112,10 +114,13 @@ export default function MamScreen() {
         ExpoGaodeMapModule.setInterval(5000);
         // ExpoGaodeMapModule.setAllowsBackgroundLocationUpdates(true);
         ExpoGaodeMapModule.setDistanceFilter(10);
-        ExpoGaodeMapModule.setDesiredAccuracy(3);
+        ExpoGaodeMapModule.setDesiredAccuracy(2);
+
         
         // 先获取初始位置
         const loc = await ExpoGaodeMapModule.getCurrentLocation();
+       
+        console.log('初始位置:', loc);
         setLocation(loc);
         setInitialPosition({
           target: { latitude: loc.latitude, longitude: loc.longitude },
@@ -132,13 +137,13 @@ export default function MamScreen() {
           subscription.remove();
         };
       } catch (error: any) {
-        console.error('初始化失败:', error);
+        console.error('初始化失败:', JSON.stringify(error));
         if (error?.code === 'PRIVACY_NOT_AGREED') {
-          Alert.alert('错误', '请先同意隐私协议');
+        toast.error('请先同意隐私协议')
         } else if (error?.code === 'API_KEY_NOT_SET') {
-          Alert.alert('错误', '未设置 API Key');
+          toast.error('未设置 API Key')
         } else {
-          Alert.alert('错误', `初始化失败: ${error?.message || error}`);
+          toast.error(`初始化失败: ${error?.message || error}`)
         }
         setInitialPosition({ target: { latitude: 39.9, longitude: 116.4 }, zoom: 15 });
       }
@@ -151,7 +156,7 @@ export default function MamScreen() {
   const handleGetLocation = async () => {
     try {
       const loc = await ExpoGaodeMapModule.getCurrentLocation();
-     
+      
       setLocation(loc);
       if (mapRef.current) {
         await mapRef.current.moveCamera({
@@ -160,20 +165,20 @@ export default function MamScreen() {
         }, 300);
       }
     } catch (error) {
-      Alert.alert('错误', '获取位置失败');
+      toast.error('获取位置失败')
     }
   };
 
   const handleStartLocation = () => {
     ExpoGaodeMapModule.start();
     setIsLocating(true);
-    Alert.alert('成功', '开始连续定位');
+    toast.success('开始连续定位')
   };
 
   const handleStopLocation = () => {
     ExpoGaodeMapModule.stop();
     setIsLocating(false);
-    Alert.alert('成功', '停止定位');
+    toast.success('停止定位')
   };
 
   const handleZoomIn = async () => {
@@ -198,7 +203,7 @@ export default function MamScreen() {
   // 声明式 API: 添加圆形
   const handleAddCircle = () => {
     if (!location) {
-      Alert.alert('提示', '请等待定位完成');
+      toast.error('请等待定位完成')
       return;
     }
     
@@ -224,7 +229,7 @@ export default function MamScreen() {
   // 动态添加标记
   const handleAddMarker = () => {
     if (!location) {
-      Alert.alert('提示', '请等待定位完成');
+      toast.error('请等待定位完成')
       return;
     }
     
@@ -238,16 +243,17 @@ export default function MamScreen() {
       longitude: location.longitude + randomOffset(),
       content: `动态标记 #${markerIdCounter.current}`,
       color: randomColor,
+      cacheKey: `marker_${markerIdCounter.current}`,
     };
     
     setDynamicMarkers(prev => [...prev, newMarker]);
-    // Alert.alert('成功', `已添加标记\n当前共 ${dynamicMarkers.length + 1} 个动态标记`);
+  
   };
 
   //动态添加折线
   const handleAddPolyline = () => {
     if (!location) {
-      Alert.alert('提示', '请等待定位完成');
+      toast.error('请等待定位完成')
       return;
     }
     
@@ -266,13 +272,13 @@ export default function MamScreen() {
     };
     
     setDynamicPolylines(prev => [...prev, newPolyline]);
-    // Alert.alert('成功', `已添加折线\n当前共 ${dynamicPolylines.length + 1} 个动态折线`);
+  
   };
 
   // 动态添加多边形
   const handleAddPolygon = () => {
     if (!location) {
-      Alert.alert('提示', '请等待定位完成');
+      toast.error('请等待定位完成')
       return;
     }
     
@@ -293,14 +299,14 @@ export default function MamScreen() {
     };
     
     setDynamicPolygons(prev => [...prev, newPolygon]);
-    // Alert.alert('成功', `已添加多边形\n当前共 ${dynamicPolygons.length + 1} 个动态多边形`);
+   
   };
 
   // 移除所有动态覆盖物
   const handleRemoveAllOverlays = () => {
     const total = dynamicCircles.length + dynamicMarkers.length + dynamicPolylines.length + dynamicPolygons.length;
     if (total === 0) {
-      Alert.alert('提示', '没有可移除的覆盖物');
+      toast.error('没有可移除的覆盖物')
       return;
     }
     
@@ -308,7 +314,8 @@ export default function MamScreen() {
     setDynamicMarkers([]);
     setDynamicPolylines([]);
     setDynamicPolygons([]);
-    Alert.alert('成功', `已移除所有 ${total} 个动态覆盖物`);
+  
+    toast.success(`已移除所有 ${total} 个动态覆盖物`)
   };
 
 
@@ -322,6 +329,7 @@ export default function MamScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000' : '#f5f5f5' }]}>
+     
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -330,23 +338,27 @@ export default function MamScreen() {
         trafficEnabled={true}
         compassEnabled={true}
         tiltGesturesEnabled={true}
-        initialCameraPosition={initialPosition}
+        initialCameraPosition={initialPosition as CameraPosition}
         minZoom={3}
         maxZoom={20}
         userLocationRepresentation={{
           showsAccuracyRing: false,
-          image: iconUri,
-          imageWidth: 40,
-          imageHeight: 40,
+          showsHeadingIndicator:true
+          // image: iconUri,
+          // imageWidth: 40,
+          // imageHeight: 40,
         }}
         onLoad={() => console.log('地图加载完成')}
         onMapPress={(e) => console.log('地图点击:', e.nativeEvent)}
         onMapLongPress={(e) => console.log('地图长按:', e.nativeEvent)}
         onCameraMove={({ nativeEvent }) => {
           const { cameraPosition } = nativeEvent;
+          console.log('相机移动中:', cameraPosition);
+          const lat = cameraPosition.target?.latitude ?? 0;
+          const lng = cameraPosition.target?.longitude ?? 0;
           const zoom = cameraPosition.zoom ?? 0;
           const bearing = cameraPosition.bearing ?? 0;
-          const info = `移动中 · 缩放 ${zoom.toFixed(2)} · 旋转 ${bearing.toFixed(2)}°`;
+          const info = `移动中 · 中心 ${cameraPosition.target?.latitude.toFixed(4)}, ${cameraPosition.target?.longitude.toFixed(4)} · 缩放 ${zoom.toFixed(2)} · 旋转 ${bearing.toFixed(2)}°`;
           setCameraInfo(info);
         }}
         onCameraIdle={({ nativeEvent }) => {
@@ -366,7 +378,7 @@ export default function MamScreen() {
             strokeColor="#FF00FF00"
             strokeWidth={3}
             zIndex={99}
-            onCirclePress={() => Alert.alert('圆形', '点击了声明式圆形')}
+            onCirclePress={() => toast.info('点击了声明式圆形')}
           />
         )}
 
@@ -378,9 +390,12 @@ export default function MamScreen() {
             fillColor={circle.fillColor}
             strokeColor={circle.strokeColor}
             strokeWidth={2}
-            onCirclePress={() => Alert.alert('圆形', `点击了动态圆形 #${circle.id}`)}
+            onCirclePress={() => toast.info(`点击了动态圆形 #${circle.id}`)}
           />
         ))}
+
+     
+        
 
         {dynamicPolylines.map((polyline) => (
           <Polyline key={polyline.id} points={polyline.points} strokeWidth={5} strokeColor={polyline.color} />
@@ -403,7 +418,8 @@ export default function MamScreen() {
             title={marker.content}
             pinColor={marker.color}
             zIndex={99}
-            onMarkerPress={() => Alert.alert('动态标记', `点击了 ${marker.content}\nID: ${marker.id}`)}
+            cacheKey={marker.id + marker.content}
+            onMarkerPress={() => toast.info( `点击了 ${marker.content}\nID: ${marker.id}`)}
           >
             <View style={[styles.markerContainer, { backgroundColor: marker.color }]}>
               <Text style={styles.markerText}>{marker.content}</Text>
@@ -416,10 +432,12 @@ export default function MamScreen() {
             key="fixed_current_location_marker"
             position={{ latitude: location.latitude, longitude: location.longitude }}
             title={location.address}
-            onMarkerPress={() => Alert.alert('标记', '点击了当前位置标记')}
+            zIndex={999}
+            cacheKey={"fixed_current_location_marker"}
+            onMarkerPress={() => toast.info('点击了定位标记')}
           >
             <View style={styles.markerContainer}>
-              <Text style={[styles.markerText, { color: primary }]}>{location?.address}</Text>
+              <Text style={[styles.markerText,]}>{location?.address}</Text>
             </View>
           </Marker>
         )}
@@ -429,10 +447,13 @@ export default function MamScreen() {
           position={{ latitude: 39.92, longitude: 116.42 }}
           title="可拖拽标记"
           draggable={true}
+                      cacheKey={"draggable_marker"}
           pinColor="purple"
-          onMarkerPress={() => Alert.alert('标记', '点击了可拖拽标记')}
+          
+          onMarkerPress={() => toast.info('点击了可拖拽标记')}
           onMarkerDragEnd={(e) => {
-            Alert.alert('拖拽结束', `新位置: ${e.nativeEvent.latitude.toFixed(6)}, ${e.nativeEvent.longitude.toFixed(6)}`);
+            toast.info(`拖拽结束\n新位置: ${e.nativeEvent.latitude.toFixed(6)}, ${e.nativeEvent.longitude.toFixed(6)}`);
+            // Alert.alert('拖拽结束', `新位置: ${e.nativeEvent.latitude.toFixed(6)}, ${e.nativeEvent.longitude.toFixed(6)}`);
           }}
         />
 
@@ -453,7 +474,8 @@ export default function MamScreen() {
             title="iOS 动画标记"
             pinColor="green"
             animatesDrop={true}
-            onMarkerPress={() => Alert.alert('标记', '点击了 iOS 动画标记')}
+            cacheKey={"ios_animated_marker"}
+            onMarkerPress={() => toast.info('点击了 iOS 动画标记')}
           />
         )}
 
@@ -467,7 +489,7 @@ export default function MamScreen() {
           strokeColor="#FFFF0000"
           strokeWidth={3}
           zIndex={1}
-          onPolygonPress={() => Alert.alert('多边形', '点击了声明式多边形')}
+          onPolygonPress={() => toast.info('点击了多边形')}
         />
 
         <Polyline
@@ -478,7 +500,7 @@ export default function MamScreen() {
           ]}
           strokeWidth={5}
           strokeColor="#FFFF0000"
-          onPolylinePress={() => Alert.alert('折线', '点击了普通折线')}
+          onPolylinePress={() => toast.info('点击了实线折线')}
         />
 
         <Polyline
@@ -490,7 +512,7 @@ export default function MamScreen() {
           strokeWidth={5}
           strokeColor="#FF0000FF"
           dotted={true}
-          onPolylinePress={() => Alert.alert('折线', '点击了虚线折线')}
+          onPolylinePress={() => toast.info('点击了虚线折线')}
         />
 
         <Polyline
@@ -502,7 +524,7 @@ export default function MamScreen() {
           strokeWidth={20}
           strokeColor="#FFFF0000"
           texture={iconUri}
-          onPolylinePress={() => Alert.alert('折线', '点击了纹理折线')}
+          onPolylinePress={() => toast.info('点击了纹理折线')}
         />
       </MapView>
 
@@ -518,7 +540,7 @@ export default function MamScreen() {
               tint={colorScheme === 'dark' ? 'dark' : 'light'}
               style={StyleSheet.absoluteFillObject}
             />
-            <Text style={[styles.chipText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={[styles.chipText, { color: textColor }]} numberOfLines={2} ellipsizeMode="tail">
               📷 {cameraInfo}
             </Text>
           </View>
@@ -647,7 +669,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    maxWidth: '80%',
+    maxWidth: '100%',
     overflow: 'hidden',
     // 轻微阴影，提升层次（Android 用 elevation 生效）
     shadowColor: '#000',
@@ -747,7 +769,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   markerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: 'red',
     borderColor: '#ccc',
     borderWidth: 1,
     paddingVertical: 4,

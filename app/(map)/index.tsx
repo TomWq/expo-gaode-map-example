@@ -1,40 +1,33 @@
+/*
+ * @Author       : 尚博信_王强 wangqiang03@sunboxsoft.com
+ * @Date         : 2025-12-09 13:35:35
+ * @LastEditors  : 尚博信_王强 wangqiang03@sunboxsoft.com
+ * @LastEditTime : 2025-12-19 14:18:59
+ * @FilePath     : /expo-gaode-map-example/app/(map)/index.tsx
+ * @Description  : 
+ * 
+ * Copyright (c) 2025 by 尚博信_王强, All Rights Reserved. 
+ */
 import Button from '@/components/UnifiedButton';
 import { useSafeScrollViewStyle } from '@/hooks/useSafeScrollView';
 import { useAuth } from "@/store/useAuth";
-import { ExpoGaodeMapModule } from 'expo-gaode-map';
 import { router } from "expo-router";
-import { useEffect } from "react";
 import { ScrollView, StyleSheet } from "react-native";
-const WEB_API_KEY = process.env.EXPO_PUBLIC_AMAP_WEB_KEY;
+
 export default function MainScreen() {
 
     const {privacyAgreed} = useAuth()
     const contentStyle = useSafeScrollViewStyle(styles.content);
 
-    useEffect(() => {
+    // const { isReady, stats } = useMapPreload({ poolSize: 1, delay: 0, strategy: 'native' }, true);
 
-        if(!privacyAgreed) {
-            return
-        }
 
-        try {
-            // 初始化SDK，已经通过 Config Plugin注入 ios 在 Info.plist 中的 key 安卓在 AndroidManifest.xml,保证安全性，
-            // 不必要在这里再次注入，如果要用 web-api 从环境变量读取 Key 生产请用 EXPO_PUBLIC_ 前缀或远端下发
-            ExpoGaodeMapModule.initSDK({
-                androidKey: '',
-                iosKey: '',
-                webKey: WEB_API_KEY
-            })
-        } catch (error) {
-            console.log(error)
-        }
-       
-    }, [])
 
     return (
         <ScrollView
             style={styles.container}
-            contentContainerStyle={contentStyle}
+            contentContainerStyle={styles.content}
+            contentInsetAdjustmentBehavior='automatic'
         >
 
             <Button title='基础地图使用' onPress={() => {
@@ -67,7 +60,9 @@ export default function MainScreen() {
             <Button title='🚗 web API 路线规划带地图' onPress={()=>{
                 router.push('/webAPINavigationTest')
             }}/>
-          
+            <Button title='离线地图下载' onPress={()=>{
+                router.push('/offlineMapExample')
+            }}/>
         </ScrollView>
     )
 }
