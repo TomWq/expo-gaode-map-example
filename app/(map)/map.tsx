@@ -170,12 +170,14 @@ export default function MamScreen() {
   };
 
   const handleStartLocation = () => {
+    ExpoGaodeMapModule.setAllowsBackgroundLocationUpdates(true);
     ExpoGaodeMapModule.start();
     setIsLocating(true);
     toast.success('开始连续定位')
   };
 
   const handleStopLocation = () => {
+    ExpoGaodeMapModule.setAllowsBackgroundLocationUpdates(false);
     ExpoGaodeMapModule.stop();
     setIsLocating(false);
     toast.success('停止定位')

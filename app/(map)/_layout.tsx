@@ -117,9 +117,11 @@ export default function Layout() {
             />
             
             <Stack.Screen
-                name="offlineMapExample"
-                options={{ title: '离线地图下载' , }}
+                name="geometryUtilsExample"
+                options={{ title: '几何计算' ,headerTransparent:false }}
             />
+
+
 
         </Stack>
     )

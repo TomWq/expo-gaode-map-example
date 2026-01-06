@@ -14,7 +14,6 @@ import { useAuth } from '@/store/useAuth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { ExpoGaodeMapModule } from 'expo-gaode-map';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -64,26 +63,6 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const {privacyAgreed} = useAuth()
 
-
-      useEffect(() => {
-  
-          if(!privacyAgreed) {
-              return
-          }
-  
-          try {
-              // 初始化SDK，已经通过 Config Plugin注入 ios 在 Info.plist 中的 key 安卓在 AndroidManifest.xml,保证安全性，
-              // 不必要在这里再次注入，如果要用 web-api 从环境变量读取 Key 生产请用 EXPO_PUBLIC_ 前缀或远端下发
-              ExpoGaodeMapModule.initSDK({
-                  androidKey: '',
-                  iosKey: '',
-                  webKey: WEB_API_KEY
-              })
-          } catch (error) {
-              console.log(error)
-          }
-         
-      }, [])
  
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

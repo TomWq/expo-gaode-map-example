@@ -1,10 +1,10 @@
+import Button from '@/components/UnifiedButton';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useSafeScrollViewStyle } from '@/hooks/useSafeScrollView';
 import { DrivingStrategy, GaodeWebAPI } from 'expo-gaode-map-web-api';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Colors from '../../constants/Colors';
-import Button from '@/components/UnifiedButton';
-import { useSafeScrollViewStyle } from '@/hooks/useSafeScrollView';
 /**
  * 驾车路径规划示例
  * 展示新版 V5 API 的各种策略和参数
