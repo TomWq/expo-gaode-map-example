@@ -121,6 +121,16 @@ export default function Layout() {
                 options={{ title: '几何计算' ,headerTransparent:false }}
             />
 
+            <Stack.Screen
+                name="trackPlaybackExample"
+                options={{ title: '轨迹回放示例' }}
+            />
+
+            <Stack.Screen
+                name="checkInExample"
+                options={{ title: '位置签到打卡' }}
+            />
+
 
 
         </Stack>

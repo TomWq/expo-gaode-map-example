@@ -11,7 +11,9 @@
 import Button from '@/components/UnifiedButton';
 import { useSafeScrollViewStyle } from '@/hooks/useSafeScrollView';
 import { useAuth } from "@/store/useAuth";
+import { ExpoGaodeMapModule } from 'expo-gaode-map';
 import { router } from "expo-router";
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet } from "react-native";
 export default function MainScreen() {
 
@@ -20,6 +22,11 @@ export default function MainScreen() {
 
     // const { isReady, stats } = useMapPreload({ poolSize: 1, delay: 0, strategy: 'native' }, true);
 
+    useEffect(()=>{
+        ExpoGaodeMapModule.initSDK({
+            webKey:'9f59c9453ccc5e9798983d4922afbd09'
+        })
+    },[])
   
     return (
         <ScrollView
@@ -58,7 +65,7 @@ export default function MainScreen() {
             <Button title='🚗 web API 路线规划带地图' onPress={()=>{
                 router.push('/webAPINavigationTest')
             }}/>
-            <Button title='离线地图下载' onPress={()=>{
+            <Button title='离线地图下载' onPress={() =>{
                 router.push('/offlineMapExample')
             }}/>
             <Button title='几何计算' onPress={
@@ -66,6 +73,18 @@ export default function MainScreen() {
                     router.push('/geometryUtilsExample')
                 }
             }/>
+            <Button title='🏃 轨迹回放示例' onPress={() => {
+                // @ts-ignore
+                router.push('/trackPlaybackExample')
+            }}/>
+            <Button title='📍 位置签到打卡' onPress={() => {
+                // @ts-ignore
+                router.push('/checkInExample')
+            }}/>
+            <Button title='🏢 行业场景综合示例' onPress={() => {
+                // @ts-ignore
+                router.push('/industrySceneExample')
+            }}/>
         </ScrollView>
     )
 }
