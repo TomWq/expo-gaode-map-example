@@ -22,11 +22,12 @@ import {
   type Coordinates,
   type ReGeocode
 } from 'expo-gaode-map';
+import { reGeocode } from 'expo-gaode-map-search';
+import * as MediaLibrary from 'expo-media-library';
 import { useNavigation } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
-
 const iconUri = Image.resolveAssetSource(require('@/assets/images/positio_icon.png')).uri;
 
 // 模拟热力图数据 (在当前位置周围生成)
@@ -79,6 +80,8 @@ export default function MamScreen() {
   const [initialPosition, setInitialPosition] = useState<CameraPosition | null>(null);
   const [cameraInfo, setCameraInfo] = useState<string>('');
   const [introVisible, setIntroVisible] = useState(false);
+  //逆地理编码位置
+  const [reGeocodeInfo, setReGeocodeInfo] = useState<string | null>(null);
 
   // 高级覆盖物状态
   const [showHeatMap, setShowHeatMap] = useState(false);
@@ -183,6 +186,14 @@ export default function MamScreen() {
 
         console.log('初始位置:', loc);
         setLocation(loc);
+        // 逆地理编码位置
+        const address = await reGeocode({
+          location:{
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+          }
+        });
+        setReGeocodeInfo(address.formattedAddress);
         setInitialPosition({
           target: { latitude: loc.latitude, longitude: loc.longitude },
           zoom: 15
@@ -453,6 +464,46 @@ export default function MamScreen() {
     });
   };
 
+    //截屏
+  const handleTakeSnapshot = async () => {
+    try {
+      const snapshotPath = await mapRef.current?.takeSnapshot();
+      if (snapshotPath) {
+        //保存到相册
+         await saveImageToAlbum(snapshotPath);
+      } else {
+        Alert.alert('错误', '截图失败');
+      }
+    } catch (error) {
+      console.error('截图错误:', error);
+      Alert.alert('错误', '截图过程中发生错误');
+    }
+  };
+
+   // 保存图片到相册
+  const saveImageToAlbum = async (uri: string) => {
+    try {
+      // 1. 请求权限
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('权限不足', '需要访问相册权限才能保存截图');
+        return;
+      }
+
+      // 2. 保存到相册
+      const asset = await MediaLibrary.createAssetAsync(uri);
+
+      // 3. (可选) 创建相册并移动
+      // await MediaLibrary.createAlbumAsync('ExpoGaodeMap', asset, false);
+
+      Alert.alert('保存成功', '截图已保存到系统相册');
+    } catch (error) {
+      console.error('保存相册失败:', error);
+      Alert.alert('保存失败', '保存到相册时发生错误');
+    }
+  };
+
   if (!initialPosition) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -467,11 +518,13 @@ export default function MamScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
+        mapType={2}
         myLocationEnabled={true}
         indoorViewEnabled={true}
         trafficEnabled={true}
         compassEnabled={true}
         tiltGesturesEnabled={true}
+        worldMapSwitchEnabled={true}
         initialCameraPosition={initialPosition as CameraPosition}
         minZoom={3}
         maxZoom={20}
@@ -614,6 +667,7 @@ export default function MamScreen() {
             customViewWidth={marker.width}
             customViewHeight={marker.height}
             cacheKey={marker.id}
+            growAnimation={true}
             onMarkerPress={() => Alert.alert('动态标记', `点击了 ${marker.content}\nID: ${marker.id}`)}
           >
             <View
@@ -677,7 +731,7 @@ export default function MamScreen() {
                 ]}
                 numberOfLines={2}
               >
-                {location?.address}
+                {reGeocodeInfo}
               </Text>
             </View>
           </Marker>
@@ -813,7 +867,7 @@ export default function MamScreen() {
       <View style={[styles.overlayBottom]}>
         <View style={[styles.panelWrap, { borderColor: hairline }]}>
           <BlurView
-            intensity={100}
+            intensity={50}
             tint={colorScheme === 'dark' ? 'dark' : 'light'}
             // experimentalBlurMethod={'dimezisBlurView'}
             style={StyleSheet.absoluteFillObject}
@@ -876,6 +930,9 @@ export default function MamScreen() {
               >
                 <Text style={styles.actionBtnText}>聚合</Text>
               </Pressable>
+                <Pressable style={[styles.actionBtn, { backgroundColor: '#607D8B' }]} onPress={handleTakeSnapshot}>
+                    <Text style={styles.actionBtnText}>截图</Text>
+                  </Pressable>
             </View>
 
             <Pressable style={[styles.removeBtn]} onPress={handleRemoveAllOverlays} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
