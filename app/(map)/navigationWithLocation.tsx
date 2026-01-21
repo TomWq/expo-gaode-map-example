@@ -166,7 +166,7 @@ export default function NavigationWithLocation() {
         if (bounds && mapRef.current) {
           mapRef.current.moveCamera({
             target: bounds.center,
-            zoom: 12,
+            zoom: 12.5,
           }, 500);
         }
       }
@@ -205,6 +205,12 @@ export default function NavigationWithLocation() {
     setTimeout(() => {
       // 必须是全新的引用，确保原生层感知到变化
       const pathForNative = [...routeData];
+      
+      // 初始化第一个点的角度，防止相机启动时突跳
+      const firstPointInfo = ExpoGaodeMapModule.getPointAtDistance(routeData, 0);
+      if (firstPointInfo) {
+        lastAngleRef.current = firstPointInfo.angle;
+      }
       
       setActivePath(pathForNative);
       setTrackingMode('simulation');
@@ -262,21 +268,42 @@ export default function NavigationWithLocation() {
         const pointInfo = ExpoGaodeMapModule.getPointAtDistance(routeData, targetDist);
         
         if (pointInfo && mapRef.current) {
-          // 更新同步位置，如果 smoothMovePath 失效，这个 position 变化也能产生一定的移动视觉
+          // 更新同步位置
           setSmoothPosition({ latitude: pointInfo.latitude, longitude: pointInfo.longitude });
 
-          // 优化角度旋转
+          // 优化角度旋转：增加预读 (Look-ahead) 逻辑，使转弯更自然
+          // 获取当前点前方 5 米处的点，用于平滑过渡角度
+          const lookAheadDist = 5; 
+          const futurePoint = ExpoGaodeMapModule.getPointAtDistance(routeData, Math.min(dist, targetDist + lookAheadDist));
+          
           let targetAngle = pointInfo.angle;
-          const diff = targetAngle - lastAngleRef.current;
-          if (diff > 180) targetAngle -= 360;
-          else if (diff < -180) targetAngle += 360;
-          lastAngleRef.current = targetAngle;
+          if (futurePoint && targetDist + lookAheadDist < dist) {
+            // 如果前方还有路，将当前角度和前方角度进行加权，提前感知转弯
+            // 权重比例：当前点 60%，前方点 40%
+            const diffNext = futurePoint.angle - pointInfo.angle;
+            let normalizedDiff = diffNext;
+            if (normalizedDiff > 180) normalizedDiff -= 360;
+            if (normalizedDiff < -180) normalizedDiff += 360;
+            targetAngle = pointInfo.angle + normalizedDiff * 0.4;
+          }
+          
+          let currentAngle = lastAngleRef.current;
+          
+          // 处理 0/360 度跳转
+          let diff = targetAngle - currentAngle;
+          if (diff > 180) diff -= 360;
+          if (diff < -180) diff += 360;
+
+          // 使用插值平滑旋转 (Lerp)
+          const smoothFactor = 0.2; // 稍微降低因子，让转弯更丝滑
+          const interpolatedAngle = currentAngle + diff * smoothFactor;
+          lastAngleRef.current = interpolatedAngle;
 
           mapRef.current.moveCamera({
             target: { latitude: pointInfo.latitude, longitude: pointInfo.longitude },
             zoom: 17,
-            bearing: targetAngle,
-          }, updateInterval); // 动画时长与间隔同步，实现平滑跟随
+            bearing: interpolatedAngle,
+          }, updateInterval);
         }
 
         if (progress >= 1) {
@@ -308,6 +335,7 @@ export default function NavigationWithLocation() {
         <MapView
           ref={mapRef}
           style={styles.map}
+          mapType={2}
           initialCameraPosition={initialCamera}
           myLocationEnabled={trackingMode === 'realtime'}
           myLocationButtonEnabled={true}
@@ -317,7 +345,7 @@ export default function NavigationWithLocation() {
               <Polyline
                 points={routeData}
                 strokeWidth={8}
-                strokeColor={C.tint}
+                strokeColor={'#FFF'}
               />
               <Marker
                 position={routeData[0]}
@@ -345,8 +373,8 @@ export default function NavigationWithLocation() {
               smoothMovePath={isNavigating ? activePath : undefined}
               smoothMoveDuration={isNavigating ? smoothDuration : undefined}
               icon={carIcon}
-              iconWidth={15}
-              iconHeight={15 * 200 / 120}
+              iconWidth={18}
+              iconHeight={18 * 200 / 120}
               anchor={{ x: 0.5, y: 0.5 }}
               zIndex={100}
             />
