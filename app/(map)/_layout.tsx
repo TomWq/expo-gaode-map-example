@@ -48,7 +48,7 @@ export default function Layout() {
             <Stack.Screen
                 name='poiMapSearch'
                 options={{
-                    title: '',
+                    title: '地图选点',
                 }}
             />
             <Stack.Screen
@@ -136,6 +136,21 @@ export default function Layout() {
                 options={{ title: '路径规划与定位平滑移动示例' }}
             />
 
+            <Stack.Screen
+                name="taxiLocationPicker"
+                options={{ title: '出租车上车点选择器/拖拽选点' }}
+            />
+            <Stack.Screen
+                name="enterpriseCheckIn"
+                options={{ title: '企微考勤打卡示例',  headerTransparent: false,}}
+            />
+            <Stack.Screen
+                name='deliveryAddressPicker'
+                options={{
+                    title: '外卖选址',
+                    headerTransparent: false,
+                }}
+            />
         </Stack>
     )
 }

@@ -12,7 +12,7 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/store/useAuth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -66,7 +66,7 @@ function RootLayoutNav() {
  
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={colorScheme === 'dark' ? DefaultTheme : DefaultTheme}>
         <Stack>
         <Stack.Protected guard={!privacyAgreed}>
           <Stack.Screen name="auth" options={{ headerShown: false }} />

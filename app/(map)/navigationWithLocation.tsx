@@ -1,26 +1,31 @@
-import { useColorScheme } from '@/components/useColorScheme';
+
+
 import Colors from '@/constants/Colors';
 import { getRouteBounds, parsePolyline } from '@/utils/routeUtils';
 import {
-    ExpoGaodeMapModule,
-    MapView,
-    MapViewRef,
-    Marker,
-    Polyline,
-    type CameraPosition,
-    type LatLng,
+  ExpoGaodeMapModule,
+  MapView,
+  MapViewRef,
+  Marker,
+  Polyline,
+  type CameraPosition,
+  type LatLng,
 } from 'expo-gaode-map';
 import { DrivingStrategy, GaodeWebAPI } from 'expo-gaode-map-web-api';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View
 } from 'react-native';
+
+
 
 const carIcon = Image.resolveAssetSource(require('@/assets/images/car.png')).uri;
 const startIcon = Image.resolveAssetSource(require('@/assets/images/start.png')).uri;
@@ -36,7 +41,7 @@ export default function NavigationWithLocation() {
   const mapRef = useRef<MapViewRef>(null);
   
   // 按照规范，Web API 需要初始化
-  const api = useMemo(() => new GaodeWebAPI({ key: '' }), []);
+  const api = useMemo(() => new GaodeWebAPI({ key: '9f59c9453ccc5e9798983d4922afbd09' }), []);
 
   const [loading, setLoading] = useState(false);
   const [routeData, setRouteData] = useState<LatLng[]>([]);
@@ -101,15 +106,18 @@ export default function NavigationWithLocation() {
 
     // 监听实时定位
     const subscription = ExpoGaodeMapModule.addLocationListener((location) => {
-      if (trackingMode === 'realtime' && !isNavigatingRef.current) {
-        setCurrentPosition({
+     if (trackingMode === 'realtime' && !isNavigatingRef.current) {
+        const newPos = {
           latitude: location.latitude,
           longitude: location.longitude,
-        });
-        // 实时追踪时移动相机
+        };
+        setCurrentPosition(newPos);
+        
+        // 实时追踪时移动相机，保持用户在中心
         mapRef.current?.moveCamera({
-          target: { latitude: location.latitude, longitude: location.longitude },
+          target: newPos,
           zoom: 17,
+          bearing: location.heading || 0, // 如果有方向信息则跟随方向
         }, 1000);
       }
     });
@@ -195,61 +203,54 @@ export default function NavigationWithLocation() {
     const duration = Math.max(5, pathLength / (baseSpeed * speed));
     setSmoothDuration(duration);
     
-    // 2. 关键修复：先更新 Key 销毁旧 Marker，并彻底重置路径
-    setMarkerKey(prev => prev + 1);
+    // 2. 重置状态，准备新动画
+     setMarkerKey(prev => prev + 1); 
     setIsNavigating(false);
     setActivePath(undefined);
     setSmoothPosition(null);
     
-    // 3. 延迟后，确保以全新的状态重新挂载
+    // 3. 启动新动画
+    const pathForNative = [...routeData];
+    
+    // 初始化第一个点的角度，防止相机启动时突跳
+    const firstPointInfo = ExpoGaodeMapModule.getPointAtDistance(pathForNative, 0);
+    if (firstPointInfo) {
+      lastAngleRef.current = firstPointInfo.angle;
+    }
+    
+    // 先将小车放在起点
+    setCurrentPosition(pathForNative[0]);
+    
+    // 延迟 50ms 注入 path 触发动画，给状态同步一点时间
     setTimeout(() => {
-      // 必须是全新的引用，确保原生层感知到变化
-      const pathForNative = [...routeData];
-      
-      // 初始化第一个点的角度，防止相机启动时突跳
-      const firstPointInfo = ExpoGaodeMapModule.getPointAtDistance(routeData, 0);
-      if (firstPointInfo) {
-        lastAngleRef.current = firstPointInfo.angle;
-      }
-      
       setActivePath(pathForNative);
       setTrackingMode('simulation');
       simulationStartTimeRef.current = Date.now();
       setIsNavigating(true);
-      // 不要在这里更新 key，让 Marker 在已挂载的情况下感知 smoothMovePath 的变化
-      // setMarkerKey(prev => prev + 1); 
-    }, 150); 
+    }, 150);
   };
 
   // 停止模拟
-    const stopSimulation = async () => {
-      // 1. 立即停止相机跟随定时器
-      if (cameraFollowIntervalRef.current) {
-        clearInterval(cameraFollowIntervalRef.current);
-        cameraFollowIntervalRef.current = null;
-      }
+  const stopSimulation = async () => {
+    // 1. 立即停止相机跟随定时器
+    if (cameraFollowIntervalRef.current) {
+      clearInterval(cameraFollowIntervalRef.current);
+      cameraFollowIntervalRef.current = null;
+    }
 
-      // 2. 计算并锁定当前位置
-      if (simulationStartTimeRef.current > 0 && routeData.length > 0) {
-        const totalDist = ExpoGaodeMapModule.calculatePathLength(routeData);
-        const elapsed = Date.now() - simulationStartTimeRef.current;
-        const durationMs = smoothDuration * 1000;
-        const progress = Math.min(1, elapsed / durationMs);
-        const pointInfo = ExpoGaodeMapModule.getPointAtDistance(routeData, totalDist * progress);
-        if (pointInfo) {
-          setCurrentPosition({ latitude: pointInfo.latitude, longitude: pointInfo.longitude });
-        }
-      }
+    // 2. 重置状态
+    setIsNavigating(false);
+    setActivePath([]); // 🔑 触发原生侧 path.isEmpty 逻辑
+    setSmoothPosition(null);
+    simulationStartTimeRef.current = 0;
+    // 🔑 强制重置 markerKey，确保小车 Marker 彻底重建，消除任何残余的原生动画状态
+    setMarkerKey(prev => prev + 1);
 
-      // 3. 彻底清理导航状态，但保持 currentPosition
-      setIsNavigating(false);
-      setActivePath(undefined);
-      setSmoothPosition(null);
-      simulationStartTimeRef.current = 0;
-
-      // 4. 通过更新 key 彻底杀掉 Native 层动画，让 Marker 停在 currentPosition
-      setMarkerKey(prev => prev + 1);
-    };
+    // 3. 将小车位置重置到路径起点
+    if (routeData.length > 0) {
+      setCurrentPosition({...routeData[0]}); // 🔑 使用解构强制创建一个新对象，确保触发 Marker 的 position 更新
+    } 
+  };
 
   // 当导航状态或追踪模式改变时，管理相机跟随
   useEffect(() => {
@@ -258,7 +259,7 @@ export default function NavigationWithLocation() {
       
       const dist = ExpoGaodeMapModule.calculatePathLength(routeData);
       const durationMs = smoothDuration * 1000;
-      const updateInterval = 100; // 采样频率提高到 100ms
+      const updateInterval = 100; // 恢复到 100ms 高频更新
       
       cameraFollowIntervalRef.current = setInterval(() => {
         const elapsed = Date.now() - simulationStartTimeRef.current;
@@ -272,14 +273,11 @@ export default function NavigationWithLocation() {
           setSmoothPosition({ latitude: pointInfo.latitude, longitude: pointInfo.longitude });
 
           // 优化角度旋转：增加预读 (Look-ahead) 逻辑，使转弯更自然
-          // 获取当前点前方 5 米处的点，用于平滑过渡角度
           const lookAheadDist = 5; 
           const futurePoint = ExpoGaodeMapModule.getPointAtDistance(routeData, Math.min(dist, targetDist + lookAheadDist));
           
           let targetAngle = pointInfo.angle;
           if (futurePoint && targetDist + lookAheadDist < dist) {
-            // 如果前方还有路，将当前角度和前方角度进行加权，提前感知转弯
-            // 权重比例：当前点 60%，前方点 40%
             const diffNext = futurePoint.angle - pointInfo.angle;
             let normalizedDiff = diffNext;
             if (normalizedDiff > 180) normalizedDiff -= 360;
@@ -288,14 +286,11 @@ export default function NavigationWithLocation() {
           }
           
           let currentAngle = lastAngleRef.current;
-          
-          // 处理 0/360 度跳转
           let diff = targetAngle - currentAngle;
           if (diff > 180) diff -= 360;
           if (diff < -180) diff += 360;
 
-          // 使用插值平滑旋转 (Lerp)
-          const smoothFactor = 0.2; // 稍微降低因子，让转弯更丝滑
+          const smoothFactor = 0.2;
           const interpolatedAngle = currentAngle + diff * smoothFactor;
           lastAngleRef.current = interpolatedAngle;
 
@@ -303,7 +298,7 @@ export default function NavigationWithLocation() {
             target: { latitude: pointInfo.latitude, longitude: pointInfo.longitude },
             zoom: 17,
             bearing: interpolatedAngle,
-          }, updateInterval);
+          }, Platform.OS === 'android' ? 200 : updateInterval); // Android 赋予稍长的动画缓冲时间，减少抖动
         }
 
         if (progress >= 1) {
@@ -339,6 +334,9 @@ export default function NavigationWithLocation() {
           initialCameraPosition={initialCamera}
           myLocationEnabled={trackingMode === 'realtime'}
           myLocationButtonEnabled={true}
+          indoorViewEnabled
+          buildingsEnabled
+          labelsEnabled
         >
           {routeData.length > 0 && (
             <>
@@ -369,7 +367,14 @@ export default function NavigationWithLocation() {
           {currentPosition && (
             <Marker
               key={markerKey}
-              position={isNavigating && smoothPosition ? smoothPosition : (isNavigating && activePath ? activePath[0] : (currentPosition || defaultOrigin))}
+              // 🔑 修复：针对 Android 和 iOS 采用不同的 position 策略
+              // Android: 必须通过 smoothPosition 持续更新属性，相机视角才能跟随车辆
+              // iOS: 必须保持 position 稳定（锚定在起点），否则会与原生动画冲突导致抖动
+              position={
+                Platform.OS === 'android'
+                  ? (isNavigating && smoothPosition ? smoothPosition : (isNavigating && activePath ? activePath[0] : (currentPosition || defaultOrigin)))
+                  : (isNavigating && activePath ? activePath[0] : (currentPosition || defaultOrigin))
+              }
               smoothMovePath={isNavigating ? activePath : undefined}
               smoothMoveDuration={isNavigating ? smoothDuration : undefined}
               icon={carIcon}
@@ -377,6 +382,7 @@ export default function NavigationWithLocation() {
               iconHeight={18 * 200 / 120}
               anchor={{ x: 0.5, y: 0.5 }}
               zIndex={100}
+              flat={true}
             />
           )}
         </MapView>

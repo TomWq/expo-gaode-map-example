@@ -24,7 +24,7 @@ export default function MainScreen() {
 
     useEffect(()=>{
         ExpoGaodeMapModule.initSDK({
-            webKey:'9f59c9453ccc5e9798983d4922afbd09'
+            webKey:''
         })
     },[])
   
@@ -74,21 +74,33 @@ export default function MainScreen() {
                 }
             }/>
             <Button title='🏃 轨迹回放示例' onPress={() => {
-                // @ts-ignore
+              
                 router.push('/trackPlaybackExample')
             }}/>
             <Button title='📍 位置签到打卡' onPress={() => {
-                // @ts-ignore
+              
                 router.push('/checkInExample')
             }}/>
             <Button title='🏢 行业场景综合示例' onPress={() => {
-                // @ts-ignore
+             
                 router.push('/industrySceneExample')
             }}/>
             <Button title='🚗 路径规划与定位平滑移动示例' onPress={() => {
-                // @ts-ignore
+               
                 router.push('/navigationWithLocation')
             }}/>
+            <Button title='🚕 出租车上车点选择器' onPress={() => {
+             
+                router.push('/taxiLocationPicker')
+            }}/>
+            <Button title='🏢 企微考勤打卡示例' onPress={() => {
+             
+                router.push('/enterpriseCheckIn')
+            }} />
+            <Button title='🍕 外卖选址界面示例' onPress={() => {
+             
+                router.push('/deliveryAddressPicker')
+            }} />
         </ScrollView>
     )
 }
