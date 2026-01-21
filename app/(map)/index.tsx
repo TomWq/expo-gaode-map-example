@@ -85,6 +85,10 @@ export default function MainScreen() {
                 // @ts-ignore
                 router.push('/industrySceneExample')
             }}/>
+            <Button title='🚗 路径规划与定位平滑移动示例' onPress={() => {
+                // @ts-ignore
+                router.push('/navigationWithLocation')
+            }}/>
         </ScrollView>
     )
 }

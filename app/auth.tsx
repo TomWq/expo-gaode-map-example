@@ -2,7 +2,6 @@ import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/store/useAuth";
-import { ExpoGaodeMapModule } from "expo-gaode-map";
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { toast } from "sonner-native";
@@ -24,7 +23,7 @@ export default function AuthScreen() {
  // 用户明确同意
  const handleAgreePrivacy = () => {
     try {
-      ExpoGaodeMapModule.updatePrivacyCompliance(true);
+      
       setPrivacyAgreed(true);
     } catch {
       toast.error("设置隐私协议状态失败");
@@ -33,7 +32,7 @@ export default function AuthScreen() {
 
   // 用户明确不同意
   const handleDeclinePrivacy = () => {
-    ExpoGaodeMapModule.updatePrivacyCompliance(false);
+
     setPrivacyAgreed(false);
     toast.info("未同意隐私协议，地图与定位功能不可用");
   };

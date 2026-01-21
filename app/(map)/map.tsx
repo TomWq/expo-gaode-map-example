@@ -144,7 +144,7 @@ export default function MamScreen() {
     strokeColor: string;
   }>>([]);
   const polygonIdCounter = useRef(0);
-
+  const [isMapReady, setIsMapReady] = useState(false);
   // 隐私协议状态：未同意前不初始化、不渲染地图
   const [privacyAgreed, setPrivacyAgreed] = useState(true);
 
@@ -174,11 +174,11 @@ export default function MamScreen() {
         }
 
         // 配置定位选项
-        // ExpoGaodeMapModule.setLocatingWithReGeocode(true);
-        // ExpoGaodeMapModule.setInterval(5000);
+        ExpoGaodeMapModule.setLocatingWithReGeocode(true);
+        ExpoGaodeMapModule.setInterval(5000);
         // // ExpoGaodeMapModule.setAllowsBackgroundLocationUpdates(true);
-        // ExpoGaodeMapModule.setDistanceFilter(10);
-        // ExpoGaodeMapModule.setDesiredAccuracy(2);
+        ExpoGaodeMapModule.setDistanceFilter(10);
+        ExpoGaodeMapModule.setDesiredAccuracy(2);
 
 
         // 先获取初始位置
@@ -529,13 +529,18 @@ export default function MamScreen() {
         minZoom={3}
         maxZoom={20}
         userLocationRepresentation={{
-          showsAccuracyRing: false,
+          showsAccuracyRing: true,
           showsHeadingIndicator: true
           // image: iconUri,
           // imageWidth: 40,
           // imageHeight: 40,
         }}
-        onLoad={() => console.log('地图加载完成')}
+        onLoad={() => {
+          console.log('地图加载完成');
+          requestAnimationFrame(() => {
+            setIsMapReady(true);
+          });
+        }}
         onMapPress={(e) => console.log('地图点击:', e.nativeEvent)}
         onMapLongPress={(e) => console.log('地图长按:', e.nativeEvent)}
         onCameraMove={({ nativeEvent }) => {
@@ -617,7 +622,7 @@ export default function MamScreen() {
           />
         )}
 
-        {location && (
+        {location && isMapReady && (
           <Circle
             center={{ latitude: location.latitude, longitude: location.longitude }}
             radius={300}
@@ -694,11 +699,11 @@ export default function MamScreen() {
           </Marker>
         ))}
 
-        {location && (
+        {location && isMapReady && (
           <Marker
             key="fixed_current_location_marker"
             position={{ latitude: location.latitude, longitude: location.longitude }}
-            zIndex={99}
+            zIndex={999}
             title={location.address}
             cacheKey="fixed_current_location_marker"
             customViewWidth={mSize.width}
