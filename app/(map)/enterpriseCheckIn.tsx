@@ -6,8 +6,7 @@ import {
   MapViewRef,
   Marker,
   Polyline,
-  type LatLng,
-  type ReGeocode
+  type LatLng
 } from 'expo-gaode-map';
 import { GaodeWebAPI, TransitStrategy, type BusLine, type Step, type TransitSegment } from 'expo-gaode-map-web-api';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -176,7 +175,7 @@ export default function EnterpriseCheckIn() {
         ExpoGaodeMapModule.setSensorEnable(true); // 使用传感器辅助定位
 
         // 监听位置更新
-        locationSubscription = ExpoGaodeMapModule.addListener('onLocationUpdate', (location: ReGeocode) => {
+        locationSubscription = ExpoGaodeMapModule.addListener('onLocationUpdate', (location) => {
           const newPos = { latitude: location.latitude, longitude: location.longitude };
           setCurrentLocation(newPos);
           

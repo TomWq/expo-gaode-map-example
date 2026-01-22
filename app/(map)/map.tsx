@@ -174,11 +174,10 @@ export default function MamScreen() {
         }
 
         // 配置定位选项
-        ExpoGaodeMapModule.setLocatingWithReGeocode(true);
+        // ExpoGaodeMapModule.setLocatingWithReGeocode(true);
         ExpoGaodeMapModule.setInterval(5000);
-        // // ExpoGaodeMapModule.setAllowsBackgroundLocationUpdates(true);
         ExpoGaodeMapModule.setDistanceFilter(10);
-        ExpoGaodeMapModule.setDesiredAccuracy(2);
+        ExpoGaodeMapModule.setDesiredAccuracy(3);
 
 
         // 先获取初始位置
