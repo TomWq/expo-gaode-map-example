@@ -9,7 +9,7 @@ import {
   type LatLng,
   type ReGeocode
 } from 'expo-gaode-map';
-import { GaodeWebAPI, Step } from 'expo-gaode-map-web-api';
+import { GaodeWebAPI, TransitStrategy, type BusLine, type Step, type TransitSegment } from 'expo-gaode-map-web-api';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,10 +21,7 @@ import {
 } from 'react-native';
 import { toast } from 'sonner-native';
 
-const OFFICE_LOCATION: LatLng = {
-  latitude: 39.915,
-  longitude: 116.403,
-};
+const OFFICE_LOCATION: LatLng = {"latitude": 39.851222, "longitude": 116.36857};
 const endIcon = Image.resolveAssetSource(require('@/assets/images/end.png')).uri;
 const startIcon = Image.resolveAssetSource(require('@/assets/images/car_start.png')).uri;
 const CHECK_IN_RADIUS = 200; // 200米打卡范围
@@ -32,7 +29,7 @@ const CHECK_IN_RADIUS = 200; // 200米打卡范围
 // --------------------------------------------------------
 // 调整这里可以控制内容在地图上的垂直位置
 // 0.5 表示正中心，值越大内容越靠上（为了避开底部面板）
-const VERTICAL_VISUAL_CENTER = 1.5; 
+const VERTICAL_VISUAL_CENTER = 2; 
 // --------------------------------------------------------
 
 export default function EnterpriseCheckIn() {
@@ -41,6 +38,9 @@ export default function EnterpriseCheckIn() {
 
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<LatLng | null>(null);
+  const [targetLocation, setTargetLocation] = useState<LatLng>(OFFICE_LOCATION);
+  const targetLocationRef = useRef<LatLng>(OFFICE_LOCATION);
+  const [startPoint, setStartPoint] = useState<LatLng | null>(null);
   const [routePoints, setRoutePoints] = useState<LatLng[]>([]);
   const [isInRange, setIsInRange] = useState(false);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
@@ -52,23 +52,38 @@ export default function EnterpriseCheckIn() {
 
     const init = async () => {
       try {
-        // 1. 获取初始位置
+        // 1. 获取初始位置作为“终点”（方便测试打卡）
         let loc = await ExpoGaodeMapModule.getCurrentLocation();
-        let startPos: LatLng;
+        let userInitialPos: LatLng;
         
         if (loc) {
-          startPos = { latitude: loc.latitude, longitude: loc.longitude };
+          userInitialPos = { latitude: loc.latitude, longitude: loc.longitude };
         } else {
-          startPos = { latitude: 39.908692, longitude: 116.397477 };
+          userInitialPos = { latitude: 39.908692, longitude: 116.397477 };
         }
-        setCurrentLocation(startPos);
-
-        // 2. 规划步行路线
-        const origin = `${startPos.longitude},${startPos.latitude}`;
-        const destination = `${OFFICE_LOCATION.longitude},${OFFICE_LOCATION.latitude}`;
         
-        const res = await api.route.walking(origin, destination, {
-          show_fields: 'cost,polyline,navi',
+        // 为了方便测试：
+        // 终点 (targetLocation) = 用户当前位置
+        // 起点 (startPoint) = 原本的办公地点 (OFFICE_LOCATION)
+        const newTarget = userInitialPos;
+        const newStart = OFFICE_LOCATION;
+        
+        setTargetLocation(newTarget);
+        targetLocationRef.current = newTarget;
+        setStartPoint(newStart);
+        setCurrentLocation(userInitialPos);
+
+        // 初始判断是否在打卡范围内
+        const initialInside = ExpoGaodeMapModule.isPointInCircle(userInitialPos, newTarget, CHECK_IN_RADIUS);
+        setIsInRange(initialInside);
+
+        // 2. 规划公交/地铁路线 (从 OFFICE_LOCATION 到 用户位置)
+        const origin = `${newStart.longitude},${newStart.latitude}`;
+        const destination = `${newTarget.longitude},${newTarget.latitude}`;
+        
+        const res = await api.route.transit(origin, destination, '010', '010', {
+          strategy: TransitStrategy.RECOMMENDED,
+          show_fields: 'cost,polyline',
         });
         
         // 默认相机位置（如果路径规划失败）
@@ -81,26 +96,44 @@ export default function EnterpriseCheckIn() {
 
         let bestCamera = { 
           target: { 
-            latitude: startPos.latitude - getOffsetForZoom(15), 
-            longitude: startPos.longitude 
+            latitude: userInitialPos.latitude - getOffsetForZoom(15), 
+            longitude: userInitialPos.longitude 
           }, 
           zoom: 15 
         };
 
-        if (res.route && res.route.paths && res.route.paths[0]) {
-          const path = res.route.paths[0];
+        if (res.route && res.route.transits && res.route.transits[0]) {
+          const transit = res.route.transits[0];
           const points: LatLng[] = [];
-          path.steps.forEach((step: Step) => {
-            if (step && step.polyline) {
-              const stepPoints = step.polyline.split(';').map((p: string) => {
-                const [lng, lat] = p.split(',');
-                return { latitude: parseFloat(lat), longitude: parseFloat(lng) };
+          
+          transit.segments.forEach((segment: TransitSegment) => {
+            // 步行段
+            if (segment.walking?.steps) {
+              segment.walking.steps.forEach((step: Step) => {
+                if (step.polyline) {
+                  points.push(...ExpoGaodeMapModule.parsePolyline(step.polyline));
+                }
               });
-              points.push(...stepPoints);
+            }
+            // 公交/地铁段
+            if (segment.bus?.buslines) {
+              segment.bus.buslines.forEach((busline: BusLine) => {
+                if (busline.polyline) {
+                  points.push(...ExpoGaodeMapModule.parsePolyline(busline.polyline));
+                }
+              });
+            }
+            // 铁路段
+            if (segment.railway?.buslines) {
+              segment.railway.buslines.forEach((railway: BusLine) => {
+                if (railway.polyline) {
+                  points.push(...ExpoGaodeMapModule.parsePolyline(railway.polyline));
+                }
+              });
             }
           });
           
-          const simplifiedPoints = ExpoGaodeMapModule.simplifyPolyline(points, 5);
+          const simplifiedPoints = ExpoGaodeMapModule.simplifyPolyline(points, 2);
           setRoutePoints(simplifiedPoints);
 
           // 计算边界框以适应路线
@@ -147,8 +180,8 @@ export default function EnterpriseCheckIn() {
           const newPos = { latitude: location.latitude, longitude: location.longitude };
           setCurrentLocation(newPos);
           
-          // 实时判断是否在打卡范围内
-          const inside = ExpoGaodeMapModule.isPointInCircle(newPos, OFFICE_LOCATION, CHECK_IN_RADIUS);
+          // 实时判断是否在打卡范围内 (使用 Ref 获取最新目标位置)
+          const inside = ExpoGaodeMapModule.isPointInCircle(newPos, targetLocationRef.current, CHECK_IN_RADIUS);
           setIsInRange(inside);
         });
 
@@ -208,36 +241,35 @@ export default function EnterpriseCheckIn() {
           }}
           myLocationEnabled
         >
-          {/* 办公区域范围 */}
+          {/* 办公区域范围 (现在设在用户初始位置) */}
           <Circle
-            center={OFFICE_LOCATION}
+            center={targetLocation}
             radius={CHECK_IN_RADIUS}
             fillColor="rgba(0, 122, 255, 0.15)"
             strokeColor="#007AFF"
             strokeWidth={2}
           />
 
-          {/* 终点标记 (办公楼) */}
+          {/* 终点标记 (现在设在用户初始位置，方便点击打卡) */}
           <Marker
-            position={OFFICE_LOCATION}
-            title="办公大楼"
-            snippet="打卡目的地"
+            position={targetLocation}
+            title="打卡点"
+            snippet="测试终点"
             icon={endIcon}
             iconWidth={40}
             iconHeight={40}
           />
 
-          {/* 起点标记 (我的位置) */}
-          {currentLocation && (
+          {/* 起点标记 (设在原本的办公大楼) */}
+          {startPoint && (
             <Marker
-              position={currentLocation}
-              title="当前位置"
-              snippet="考勤起点"
+              position={startPoint}
+              title="路线起点"
+              snippet="测试起点"
               icon={startIcon}
               iconWidth={40}
               iconHeight={40}
               zIndex={1000}
-              // 可以自定义图标
             />
           )}
 
@@ -250,6 +282,7 @@ export default function EnterpriseCheckIn() {
                 strokeColor="#2D8C3C"
                 strokeWidth={12}
                 zIndex={10}
+              
               />
               {/* 顶层：主色线 */}
               <Polyline
@@ -257,6 +290,7 @@ export default function EnterpriseCheckIn() {
                 strokeColor="#4CD964"
                 strokeWidth={6}
                 zIndex={11}
+              
               />
             </>
           )}
@@ -266,10 +300,10 @@ export default function EnterpriseCheckIn() {
       {/* 底部企微风格打卡面板 */}
       <View style={styles.bottomPanel}>
          <BlurView
-              intensity={80}
+              intensity={10}
               tint={'light'}
               style={StyleSheet.absoluteFillObject}
-              experimentalBlurMethod={'dimezisBlurView'}
+              // experimentalBlurMethod={'dimezisBlurView'}
             />
         <View style={styles.panelHeader}>
           <Text style={styles.companyName}>大连尚博信科技有限公司</Text>
@@ -336,7 +370,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -362,7 +396,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: 'transparent',
     borderRadius: 12,
     padding: 12,
     marginBottom: 15,
@@ -403,15 +437,17 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: '#007AFF',
+    // backgroundColor: '#007AFF',
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
     boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)",
+    //渐变
+    experimental_backgroundImage: 'linear-gradient(to bottom, #007AFF,  #007bff2c)',
   },
   checkInButtonDisabled: {
     backgroundColor: '#CCC',
-   boxShadow: "0 4px 12px rgba(0, 122, 255, 0.2)",
+    boxShadow: "0 4px 12px rgba(0, 122, 255, 0.2)",
   },
   buttonInner: {
     alignItems: 'center',

@@ -192,6 +192,7 @@ export default function DeliveryAddressPicker() {
 
   // 选择 POI 或 建议项
   const handleSelectPoi = (item: POI | InputTip) => {
+    console.log('Selected POI:', item);
     if (!item.location) return;
 
     const pos = { 
@@ -253,6 +254,7 @@ export default function DeliveryAddressPicker() {
   };
 
   const renderSuggestionItem = ({ item }: { item: InputTip }) => (
+   
     <TouchableOpacity 
       style={styles.suggestionItem} 
       onPress={() => handleSelectPoi(item)}

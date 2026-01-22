@@ -3,7 +3,7 @@ import { RouteCard } from '@/components/RouteCard';
 import { RouteInfoCard } from '@/components/RouteInfoCard';
 import { useAddressSearch } from '@/hooks/useAddressSearch';
 import { RouteData, useRoutePlanning } from '@/hooks/useRoutePlanning';
-import { getRouteBounds, simplifyPath } from '@/utils/routeUtils';
+import { getRouteBounds } from '@/utils/routeUtils';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { BlurView } from 'expo-blur';
 import { ExpoGaodeMapModule, MapView, MapViewRef, Marker, Polyline } from 'expo-gaode-map';
@@ -182,7 +182,7 @@ export default function WebAPINavigationTest() {
 
   // 直接显示完整路线（不播放动画）
   const showFullRoute = (fullPath: Array<{ latitude: number; longitude: number }>) => {
-    const simplifiedPath = simplifyPath(fullPath, 150);
+    const simplifiedPath = ExpoGaodeMapModule.simplifyPolyline(fullPath, 5);
     console.log(`[WebAPI] 显示完整路线，点数: ${fullPath.length}, 简化后: ${simplifiedPath.length}`);
     
     setFullPathData(simplifiedPath);
@@ -208,7 +208,7 @@ export default function WebAPINavigationTest() {
   const animatePolyline = (fullPath: Array<{ latitude: number; longitude: number }>) => {
     setIsAnimating(true);
     
-    const simplifiedPath = simplifyPath(fullPath, 150);
+    const simplifiedPath = ExpoGaodeMapModule.simplifyPolyline(fullPath, 5);
     console.log(`[WebAPI动画] 原始点数: ${fullPath.length}, 简化后: ${simplifiedPath.length}`);
     
     setFullPathData(simplifiedPath);

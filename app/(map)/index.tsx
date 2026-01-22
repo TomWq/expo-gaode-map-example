@@ -24,7 +24,7 @@ export default function MainScreen() {
 
     useEffect(()=>{
         ExpoGaodeMapModule.initSDK({
-            webKey:''
+            webKey:'9f59c9453ccc5e9798983d4922afbd09'
         })
     },[])
   
@@ -77,10 +77,7 @@ export default function MainScreen() {
               
                 router.push('/trackPlaybackExample')
             }}/>
-            <Button title='📍 位置签到打卡' onPress={() => {
-              
-                router.push('/checkInExample')
-            }}/>
+       
             <Button title='🏢 行业场景综合示例' onPress={() => {
              
                 router.push('/industrySceneExample')

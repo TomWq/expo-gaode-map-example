@@ -1,8 +1,8 @@
+import { ExpoGaodeMapModule } from 'expo-gaode-map';
 import { DrivingStrategy, GaodeWebAPI, TransitStrategy } from 'expo-gaode-map-web-api';
 import { useState } from 'react';
 import { toast } from 'sonner-native';
-import { generateRouteColor, parsePolyline } from '../utils/routeUtils';
-
+import { generateRouteColor } from '../utils/routeUtils';
 export interface RouteData {
   id: number;
   distance: number;
@@ -120,7 +120,7 @@ async function calculateDrivingRoutes(api: GaodeWebAPI, origin: string, dest: st
           tolls: path.cost?.tolls || '0',
           trafficLights: path.cost?.traffic_lights || '0',
           polyline: path.steps?.flatMap((step: any) =>
-            step.polyline && typeof step.polyline === 'string' ? parsePolyline(step.polyline) : []
+            ExpoGaodeMapModule.parsePolyline(step.polyline)
           ) || [],
           strategyName: strategy.name,
           strategy: strategy.value,
@@ -147,7 +147,7 @@ async function calculateDrivingRoutes(api: GaodeWebAPI, origin: string, dest: st
               tolls: altPath.cost?.tolls || '0',
               trafficLights: altPath.cost?.traffic_lights || '0',
               polyline: altPath.steps?.flatMap((step: any) =>
-                step.polyline && typeof step.polyline === 'string' ? parsePolyline(step.polyline) : []
+                ExpoGaodeMapModule.parsePolyline(step.polyline)
               ) || [],
               strategyName: `${strategy.name}备选${i}`,
               strategy: strategy.value,
@@ -181,7 +181,7 @@ async function calculateWalkingRoutes(api: GaodeWebAPI, origin: string, dest: st
     distance: parseInt(path.distance),
     duration: parseInt(path.cost?.duration || '0'),
     polyline: path.steps?.flatMap((step: any) =>
-      step.polyline && typeof step.polyline === 'string' ? parsePolyline(step.polyline) : []
+      ExpoGaodeMapModule.parsePolyline(step.polyline)
     ) || [],
     strategyName: index === 0 ? '推荐' : `方案${index + 1}`,
     color: generateRouteColor(index),
@@ -216,7 +216,7 @@ async function calculateBicyclingRoutes(api: GaodeWebAPI, origin: string, dest: 
         distance,
         duration,
         polyline: path.steps?.flatMap((step: any) =>
-          step.polyline && typeof step.polyline === 'string' ? parsePolyline(step.polyline) : []
+          ExpoGaodeMapModule.parsePolyline(step.polyline)
         ) || [],
         strategyName: index === 0 ? '推荐' : `方案${index + 1}`,
         color: generateRouteColor(index),
@@ -278,37 +278,19 @@ function processTransitRoute(transit: any, id: number, strategyName: string): Ro
 
   transit.segments?.forEach((segment: any) => {
     // 步行段
-    if (segment.walking?.steps && Array.isArray(segment.walking.steps)) {
-      segment.walking.steps.forEach((step: any) => {
-        const polylineStr = step.polyline?.polyline || step.polyline;
-        if (polylineStr && typeof polylineStr === 'string') {
-          const parsed = parsePolyline(polylineStr);
-          if (parsed.length > 0) allPoints.push(...parsed);
-        }
-      });
-    }
+    segment.walking?.steps?.forEach((step: any) => {
+      allPoints.push(...ExpoGaodeMapModule.parsePolyline(step.polyline));
+    });
 
     // 公交段
-    if (segment.bus?.buslines && Array.isArray(segment.bus.buslines)) {
-      segment.bus.buslines.forEach((busline: any) => {
-        const polylineStr = busline.polyline?.polyline || busline.polyline;
-        if (polylineStr && typeof polylineStr === 'string') {
-          const parsed = parsePolyline(polylineStr);
-          if (parsed.length > 0) allPoints.push(...parsed);
-        }
-      });
-    }
+    segment.bus?.buslines?.forEach((busline: any) => {
+      allPoints.push(...ExpoGaodeMapModule.parsePolyline(busline.polyline));
+    });
 
     // 地铁段
-    if (segment.railway?.buslines && Array.isArray(segment.railway.buslines)) {
-      segment.railway.buslines.forEach((busline: any) => {
-        const polylineStr = busline.polyline?.polyline || busline.polyline;
-        if (polylineStr && typeof polylineStr === 'string') {
-          const parsed = parsePolyline(polylineStr);
-          if (parsed.length > 0) allPoints.push(...parsed);
-        }
-      });
-    }
+    segment.railway?.buslines?.forEach((busline: any) => {
+      allPoints.push(...ExpoGaodeMapModule.parsePolyline(busline.polyline));
+    });
   });
 
   return {

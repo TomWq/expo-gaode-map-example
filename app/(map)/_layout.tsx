@@ -126,11 +126,7 @@ export default function Layout() {
                 options={{ title: '轨迹回放示例' }}
             />
 
-            <Stack.Screen
-                name="checkInExample"
-                options={{ title: '位置签到打卡' }}
-            />
-
+        
            <Stack.Screen
                 name="navigationWithLocation"
                 options={{ title: '路径规划与定位平滑移动示例' }}

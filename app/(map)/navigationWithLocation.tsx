@@ -1,7 +1,7 @@
 
 
 import Colors from '@/constants/Colors';
-import { getRouteBounds, parsePolyline } from '@/utils/routeUtils';
+import { getRouteBounds } from '@/utils/routeUtils';
 import {
   ExpoGaodeMapModule,
   MapView,
@@ -145,18 +145,14 @@ export default function NavigationWithLocation() {
         let allPoints: LatLng[] = [];
         path.steps.forEach(step => {
           if (step.polyline) {
-            allPoints.push(...parsePolyline(step.polyline));
+            allPoints.push(...ExpoGaodeMapModule.parsePolyline(step.polyline));
           }
         });
 
-        // 路径点预处理：确保坐标精度和有效性
+        // 路径点预处理：由于 parsePolyline 现在返回 LatLng[]
         const validPoints = allPoints.filter(p => 
-          !isNaN(p.latitude) && !isNaN(p.longitude) && 
-          p.latitude !== 0 && p.longitude !== 0
-        ).map(p => ({
-          latitude: Number(p.latitude.toFixed(6)),
-          longitude: Number(p.longitude.toFixed(6))
-        }));
+          p && typeof p.latitude === 'number' && typeof p.longitude === 'number'
+        );
 
         // 性能建议：使用原生轨迹简化 (simplifyPolyline)
         let simplified = validPoints;
@@ -372,8 +368,8 @@ export default function NavigationWithLocation() {
               // iOS: 必须保持 position 稳定（锚定在起点），否则会与原生动画冲突导致抖动
               position={
                 Platform.OS === 'android'
-                  ? (isNavigating && smoothPosition ? smoothPosition : (isNavigating && activePath ? activePath[0] : (currentPosition || defaultOrigin)))
-                  : (isNavigating && activePath ? activePath[0] : (currentPosition || defaultOrigin))
+                  ? (isNavigating && smoothPosition ? smoothPosition : (isNavigating && activePath && activePath.length > 0 ? activePath[0] : (currentPosition || defaultOrigin)))
+                  : (isNavigating && activePath && activePath.length > 0 ? activePath[0] : (currentPosition || defaultOrigin))
               }
               smoothMovePath={isNavigating ? activePath : undefined}
               smoothMoveDuration={isNavigating ? smoothDuration : undefined}
