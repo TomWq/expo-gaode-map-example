@@ -208,25 +208,23 @@ export default function TaxiLocationPicker() {
           zoomControlsEnabled={false}
         />
         
-        {/* 中心固定大头针 - 仅在初始化完成后显示 */}
-        {!isInitialLoading && (
-          <View 
-            style={[
-              styles.markerFixed, 
-              { top: `${VISUAL_CENTER_RATIO * 100}%` }
-            ]} 
-            pointerEvents="none"
-          >
-            <Animated.View style={[styles.markerContainer, animatedMarkerStyle]}>
-              <Image 
-                source={require('../../assets/images/car_start.png')} 
-                style={styles.markerIcon} 
-                resizeMode="contain"
-              />
-              <View style={styles.markerShadow} />
-            </Animated.View>
-          </View>
-        )}
+        {/* 中心固定大头针 */}
+        <View 
+          style={[
+            styles.markerFixed, 
+            { top: `${VISUAL_CENTER_RATIO * 100}%` }
+          ]} 
+          pointerEvents="none"
+        >
+          <Animated.View style={[styles.markerContainer, animatedMarkerStyle]}>
+            <Image 
+              source={require('../../assets/images/car_start.png')} 
+              style={styles.markerIcon} 
+              resizeMode="contain"
+            />
+            <View style={styles.markerShadow} />
+          </Animated.View>
+        </View>
 
         {/* 定位按钮 */}
         <TouchableOpacity 
