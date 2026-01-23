@@ -86,7 +86,10 @@ export default function MainScreen() {
                
                 router.push('/navigationWithLocation')
             }}/>
-            <Button title='🚕 出租车上车点选择器' onPress={() => {
+            <Button title='配送员路线视图(模拟)' onPress={() => {
+                router.push('/deliveryRouteExample')
+            }}/>
+            <Button title='�🚕 出租车上车点选择器' onPress={() => {
              
                 router.push('/taxiLocationPicker')
             }}/>

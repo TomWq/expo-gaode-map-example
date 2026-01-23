@@ -147,6 +147,10 @@ export default function Layout() {
                     headerTransparent: false,
                 }}
             />
+            <Stack.Screen
+                name="deliveryRouteExample"
+                options={{ title: '配送员路线视图(模拟)' }}
+            />
         </Stack>
     )
 }
